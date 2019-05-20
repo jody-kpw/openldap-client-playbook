@@ -1,0 +1,7 @@
+# ---
+- hosts: openldap-client
+  become: true
+  roles:
+    # openldap-client : install openldap-client for linux authentication
+    - roles/openldap-client
+

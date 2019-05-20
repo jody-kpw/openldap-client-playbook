@@ -1,0 +1,231 @@
+---
+- name: yum install ldap packages
+  yum:
+    name: "{{ item.name }}"
+    state: present
+  register: yum_install_ldap_packages_result
+  with_items: "{{ yum_install_ldap_packages }}"
+  when: enable_ldap
+
+- name: yum install ldap packages result
+  debug: msg="{{ yum_install_ldap_packages_result.results }}"
+  when: enable_ldap
+
+- name: yum remove ldap packages
+  yum:
+    name: "{{ item.name }}"
+    state: absent
+  register: yum_remove_ldap_packages_result
+  with_items: "{{ yum_install_ldap_packages }}"
+  when: not enable_ldap
+
+- name: yum remove ldap packages result
+  debug: msg="{{ yum_remove_ldap_packages_result.results }}"
+  when: not enable_ldap
+
+- name: command authconfig enableldap
+  command: authconfig --enableldap --enableldapauth --enablemkhomedir --ldapserver="{{ldap_server}}" --ldapbasedn="{{ldap_base}}" --update
+  register: command_authconfig_enableldap_result
+  when: enable_ldap
+
+- name: command authconfig enableldap result
+  debug: msg="{{ command_authconfig_enableldap_result }}"
+  when: enable_ldap
+
+- name: command authconfig disableldap
+  command: authconfig --disableldap --disableldapauth --disablemkhomedir --update
+  register: command_authconfig_disableldap_result
+  when: not enable_ldap
+
+- name: command authconfig disableldap result
+  debug: msg="{{ command_authconfig_disableldap_result }}"
+  when: not enable_ldap
+
+# Manage lines in /etc/sudo-ldap.conf
+- name: (/etc/sudo-ldap.conf) - Added BindDN
+  lineinfile:
+    path: /etc/sudo-ldap.conf
+    regexp: '^binddn'
+    line: 'binddn {{ldap_bind_dn}}'
+  when:
+    - enable_ldap
+    - enable_ldap_sudoers
+
+- name: (/etc/sudo-ldap.conf) - Added BindPW
+  lineinfile:
+    path: /etc/sudo-ldap.conf
+    regexp: '^bindpw'
+    line: 'bindpw {{ldap_bind_pw}}'
+  when:
+    - enable_ldap
+    - enable_ldap_sudoers
+
+- name: (/etc/sudo-ldap.conf) - Added Base
+  lineinfile:
+    path: /etc/sudo-ldap.conf
+    regexp: '^base'
+    line: 'base {{ldap_base}}'
+  when:
+    - enable_ldap
+    - enable_ldap_sudoers
+
+- name: (/etc/sudo-ldap.conf) - Added uri
+  lineinfile:
+    path: /etc/sudo-ldap.conf
+    regexp: '^uri'
+    line: 'uri ldap://{{ldap_server}}/'
+  when:
+    - enable_ldap
+    - enable_ldap_sudoers
+
+- name: (/etc/sudo-ldap.conf) - Added ldap_version
+  lineinfile:
+    path: /etc/sudo-ldap.conf
+    regexp: '^ldap_version'
+    line: 'ldap_version 3'
+  when:
+    - enable_ldap
+    - enable_ldap_sudoers
+
+- name: (/etc/sudo-ldap.conf) - Added SUDOERS_BASE
+  lineinfile:
+    path: /etc/sudo-ldap.conf
+    regexp: '^SUDOERS_BASE'
+    line: 'SUDOERS_BASE {{ldap_sudoers_base}}'
+  when:
+    - enable_ldap
+    - enable_ldap_sudoers
+
+- name: (/etc/sudo-ldap.conf) - Added SUDOERS_DEBUG
+  lineinfile:
+    path: /etc/sudo-ldap.conf
+    regexp: '^SUDOERS_DEBUG'
+    line: 'SUDOERS_DEBUG 1'
+  when:
+    - enable_ldap
+    - enable_ldap_sudoers
+    - enable_sudoers_debug
+
+- name: (/etc/sudo-ldap.conf) - Remove SUDOERS_DEBUG
+  lineinfile:
+    path: /etc/sudo-ldap.conf
+    regexp: '^SUDOERS_DEBUG'
+    state: absent
+  when:
+    - enable_ldap
+    - enable_ldap_sudoers
+    - not enable_sudoers_debug
+
+- name: (/etc/sudo-ldap.conf) - Removing sudoers binddn
+  lineinfile:
+    state: absent
+    dest: /etc/sudo-ldap.conf
+    regexp: '^binddn'
+  when: not enable_ldap_sudoers
+
+- name: (/etc/sudo-ldap.conf) - Removing sudoers bindpw
+  lineinfile:
+    state: absent
+    dest: /etc/sudo-ldap.conf
+    regexp: '^bindpw'
+  when: not enable_ldap_sudoers
+
+- name: (/etc/sudo-ldap.conf) - Removing sudoers base
+  lineinfile:
+    state: absent
+    dest: /etc/sudo-ldap.conf
+    regexp: '^base'
+  when: not enable_ldap_sudoers
+
+- name: (/etc/sudo-ldap.conf) - Removing sudoers uri
+  lineinfile:
+    state: absent
+    dest: /etc/sudo-ldap.conf
+    regexp: '^uri'
+  when: not enable_ldap_sudoers
+
+- name: (/etc/sudo-ldap.conf) - Removing sudoers ldap_version
+  lineinfile:
+    state: absent
+    dest: /etc/sudo-ldap.conf
+    regexp: '^ldap_version'
+  when: not enable_ldap_sudoers
+
+- name: (/etc/sudo-ldap.conf) - Removing sudoers SUDOERS_BASE
+  lineinfile:
+    state: absent
+    dest: /etc/sudo-ldap.conf
+    regexp: '^SUDOERS_BASE'
+  when: not enable_ldap_sudoers
+
+- name: (/etc/sudo-ldap.conf) - Removing sudoers SUDOERS_DEBUG
+  lineinfile:
+    state: absent
+    dest: /etc/sudo-ldap.conf
+    regexp: '^SUDOERS_DEBUG'
+  when: not enable_ldap_sudoers
+
+# Manage lines in /etc/nsswitch.conf
+- name: (/etc/nsswitch.conf) - Added sudoers
+  lineinfile:
+    path: /etc/nsswitch.conf
+    regexp: '^.*# added sudoers'
+    line: 'sudoers: files ldap  #ansible_updated (# added sudoers)'
+  when:
+    - enable_ldap
+    - enable_ldap_sudoers
+
+- name: (/etc/nsswitch.conf) - Removing all sudoers entries
+  lineinfile:
+    state: absent
+    dest: /etc/nsswitch.conf
+    regexp: "^.*#ansible_updated$"
+  when: not enable_ldap_sudoers
+
+# Manage lines in /etc/nslcd.conf
+- name: (/etc/nslcd.conf) - Added binddn
+  lineinfile:
+    path: /etc/nslcd.conf
+    regexp: '^binddn'
+    line: 'binddn {{ldap_bind_dn}}'
+  when: enable_ldap
+
+- name: (/etc/nslcd.conf) - Added bindpw
+  lineinfile:
+    path: /etc/nslcd.conf
+    regexp: '^bindpw'
+    line: 'bindpw {{ldap_bind_pw}}'
+  when: enable_ldap
+
+- name: (/etc/nslcd.conf) - Added group base
+  lineinfile:
+    path: /etc/nslcd.conf
+    regexp: '^base.*group'
+    line: 'base   group  {{ldap_group_base}}'
+  when: enable_ldap
+
+- name: (/etc/nslcd.conf) - Removing nslcd binddn
+  lineinfile:
+    state: absent
+    dest: /etc/nslcd.conf
+    regexp: "^binddn"
+  when: not enable_ldap
+
+- name: (/etc/nslcd.conf) - Removing nslcd bindpw
+  lineinfile:
+    state: absent
+    dest: /etc/nslcd.conf
+    regexp: "^bindpw"
+  when: not enable_ldap
+
+- name: (/etc/nslcd.conf) - Removing nslcd group base
+  lineinfile:
+    state: absent
+    dest: /etc/nslcd.conf
+    regexp: "^base.*group"
+  when: not enable_ldap
+
+- name: Restart nslcd
+  systemd:
+    state: restarted
+    name: nslcd

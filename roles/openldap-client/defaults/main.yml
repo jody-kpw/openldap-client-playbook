@@ -1,0 +1,27 @@
+---
+# Roles: openldap-clients
+# Enable LDAP
+enable_ldap: true
+
+# LDAP DNs
+ldap_server: 192.168.1.1
+ldap_bind_dn: cn=admin,dc=domain,dc=com
+ldap_bind_pw: password
+ldap_base: dc=domain,dc=com
+
+# /etc/nslcd.conf GROUP BASE
+ldap_group_base: ou=groups,dc=domain,dc=com
+
+# Enable SUDOers
+enable_ldap_sudoers: true
+
+# Enable SUDOers debug
+enable_sudoers_debug: false
+
+# /etc/sudo-ldap.conf
+ldap_sudoers_base: ou=SUDOers,dc=domain,dc=com
+
+# yum install ldap packages
+yum_install_ldap_packages:
+  - {name: 'openldap-clients'}
+  - {name: 'nss-pam-ldapd'}
